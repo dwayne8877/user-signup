@@ -18,7 +18,7 @@ import webapp2
 
 def build_page(form_data):
 
-    header= "<h1>User Signup</h1>"
+    header= "<h1 align='center'>User Signup</h1>"
 
     username_label = "<label> Username: </label>"
     username_input = "<input name='username'/>"
@@ -35,10 +35,10 @@ def build_page(form_data):
     submit = "<input type='submit' />"
 
 
-    form = ("<form method='post'>" + username_label + username_input + "<br>"
-            + password_label + password_input + "<br>" + verify_label +
-            verify_input + "<br>" + email_label + email_input + "<br>" +
-            submit + "</form>")
+    form = ("<form align='center' method='post'>" + username_label +
+            username_input + "<br>" + password_label + password_input +
+             "<br>" + verify_label + verify_input + "<br>" + email_label +
+             email_input + "<br>" + submit + "</form>")
 
     return header + form
 class MainHandler(webapp2.RequestHandler):
@@ -55,8 +55,6 @@ class MainHandler(webapp2.RequestHandler):
         email = self.request.get('email')
 
         self.response.write(content)
-
-
 
 app = webapp2.WSGIApplication([
     ('/', MainHandler)
