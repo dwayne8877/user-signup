@@ -1,100 +1,117 @@
+#Import functions
 import webapp2
 import re
 
 
-def build_page():
-
-    header= "<h1 align='center'>User Signup</h1>"
-
-    username_label ="<label> Username: </label>"
-    username_input = "<input name='username' value='%(username)s'/>"
-
-    password_label = "<label> Password: </label>"
-    password_input = "<input type = 'password' name = 'password' value='%(password)s'/>"
-
-    verify_label = "<label> Verify Password: </label>"
-    verify_input = "<input type = 'password' name = 'verify_password' value='%(verify_password)s'/>"
-
-    email_label = "<label> Email (optional): </label>"
-    email_input = "<input name = 'email' value='%(email)s' />"
-
-    submit = "<input type='submit' />"
+# Universal header
+# Add this to the beginning of all HTML content
+page_header = """<html>
+    <head>
+        <title>User Signup</title>
+    </head>
+    <body>
+"""
 
 
-    form = ("<form align='center' method='post'>"
-
-            + username_label + username_input + "<label style = 'color:red' ></label>" +
-            "<br>"
-            + password_label + password_input + "<label style = 'color:red' > </label>" +
-            "<br>"
-            + verify_label + verify_input + "<label style = 'color:red' > </label>" +
-            "<br>"
-            + email_label + email_input + "<label style = 'color:red' >  </label>"
-            "<br>"
-
-            + "<div style ='color: red' > %(error)s </div>"
-            + submit +
-            "</form>")
-
-    return header + form
+# Submission form
+# Include %s tokens so that we can pass in parameters later
+form = """        <h2>Sign Up</h2>
+        <form method="post">
+            Username: <input type="text" name="username" value="%s"> <font color="#FF0000">%s</font><br>
+            Password: <input type="password" name="password" value=""> <font color="#FF0000">%s</font><br>
+            Verify password: <input type="password" name="verify" value=""> <font color="#FF0000">%s</font><br>
+            Email (optional): <input type="text" name="email" value="%s"> <font color="#FF0000">%s</font><br>
+            <input type="submit">
+        </form>
+"""
 
 
-USER_RE = re.compile(r"^[a-zA-Z0-9_-]{3,20}$")
+# Universal footer
+# Add this to the end of all HTML content
+page_footer = """    </body>
+</html>"""
+
+
+# Validate the inputted username using regular expressions
+# If the username exists and is of valid form, function returns True
 def valid_username(username):
-    return username and USER_RE.match(username)
+    user_re = re.compile(r"^[a-zA-z0-9_-]{3,20}$")
+    return username and user_re.match(username)
 
-PASS_RE = re.compile(r"^.{3,20}$")
+
+# Validate the inputted password
 def valid_password(password):
-    return password and PASS_RE.match(password)
+    pass_re = re.compile(r"^.{3,20}$")
+    return password and pass_re.match(password)
 
-EMAIL_RE  = re.compile(r'^[\S]+@[\S]+\.[\S]+$')
+
+# Validate the inputted email
 def valid_email(email):
-    return not email or EMAIL_RE.match(email)
+    mail_re = re.compile(r"[\S]+@[\S]+.[\S]+$")
+    return not email or mail_re.match(email)
 
 
+# Render page
 class MainHandler(webapp2.RequestHandler):
-
-    def write_form(self, error="", username="", password="", verify_password="", email=""):
-
-        content = build_page()
-
-        self.response.out.write(content % {"error": error,
-                                            "username": username,
-                                            "password": password,
-                                            "verify_password": verify_password,
-                                            "email": email})
-
+    # get(self) renders the page before any information has been submitted
     def get(self):
-        self.write_form()
+        # Build page with empty parameters and display
+        # Order of parameters: username, username error, password error, verify error, email, email error
+        parameters = ["", "", "", "", "", ""]
+        page_content = form % (parameters[0], parameters[1], parameters[2], parameters[3], parameters[4], parameters[5])
+        content = page_header + page_content + page_footer
+        self.response.write(content)
 
-
+    # post(self) only renders after information has been submitted
     def post(self):
+        # Initialize variables
+        parameters = ["", "", "", "", "", ""]
+        error = False
 
-        username = self.request.get('username')
-        password = self.request.get('password')
-        verify_password = self.request.get('verify_password')
-        email = self.request.get('email')
+        # Input information
+        username = self.request.get("username")
+        password = self.request.get("password")
+        verify = self.request.get("verify")
+        email = self.request.get("email")
 
-        username2 = valid_username(username)
-        password2 = valid_password(password)
-        verify_password2 = valid_password(verify_password)
-        email2 = valid_email(email)
+        # Store username and email if they're present
+        if username:
+            parameters[0] = username
+        if email:
+            parameters[4] = email
 
-        if not (username2 and password2 and verify_password2 and email2):
-            #self.response.out.write(content)
-            #self.write_form('Please resubmit information', 'Invalid Username',
-            #'Invalid Password',"Your Passwords don't match",'Invalid Email' )
-            self.write_form ('Please resubmit',username,password, verify_password2
-                            email)
+        # Check if username, password and email are valid and set error value accordingly
+        # If errors are present, put error messages in the parameters
+        if not valid_username(username):
+            parameters[1] = "Error: Invalid username."
+            error = True
+        if not valid_password(password):
+            parameters[2] = "Error: Invalid password."
+            error = True
+        if not valid_email(email):
+            parameters[5] = "Error: invalid email address."
+            error = True
 
-        #if not (password2 and verify_password2):
-            #self.write_form('', '','Your passwords dont match')
+        # Only trigger the mismatching passwords error if first password is nonempty
+        if password and password != verify:
+            parameters[3] = "Error: Passwords do not match."
+            error = True
 
-        #if not (email2):
-            #self.write_form('','','','Invalid email')
+        # If errors are present, rerender the page with accompanying errors
+        # Otherwise render the welcome page
+        if error:
+            page_content = form % (parameters[0], parameters[1], parameters[2], parameters[3], parameters[4], parameters[5])
+            content = page_header + page_content + page_footer
+            self.response.write(content)
         else:
-            self.response.write('Thank You!')
+            page_content = "        <p>Welcome, " + username + "!<p>"
+            content = page_header + page_content + page_footer
+            self.response.write(content)
 
-app = webapp2.WSGIApplication([
-    ('/', MainHandler)
-], debug=True)
+
+# Pair URLs with functions
+routes = [("/", MainHandler)]
+
+
+# Run webapp with debugger enabled
+app = webapp2.WSGIApplication(routes, debug=True)
